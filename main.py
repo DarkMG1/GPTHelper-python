@@ -36,10 +36,8 @@ intents.guild_messages, intents.message_content, intents.reactions = True, True,
 client = GPTHelper(discord_intents=intents)
 
 @client.tree.command()
-@app_commands.describe(
-    user="The user to setup"
-)
-@app_commands.
+@app_commands.describe(user="The user to setup")
+@app_commands.AppCommandPermissions(user="")
 async def setup(interaction: discord.Interaction, user: discord.Member):
     """Set up a user with a channel to use the bot"""
 
