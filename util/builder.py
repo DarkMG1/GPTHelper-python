@@ -1,5 +1,6 @@
 import discord
 
+
 class EmbedBuilder:
     def __init__(self) -> None:
         self.footer = ""
@@ -12,7 +13,7 @@ class EmbedBuilder:
         self.url = ""
         self.timestamp = discord.utils.utcnow()
 
-    def  settitle(self, title: str) -> 'EmbedBuilder':
+    def settitle(self, title: str) -> 'EmbedBuilder':
         self.title = title
         return self
 
@@ -31,11 +32,11 @@ class EmbedBuilder:
     def seturl(self, url: str) -> 'EmbedBuilder':
         self.url = url
         return self
-    
+
     def setauthor(self, name: str) -> 'EmbedBuilder':
         self.author = name
         return self
-    
+
     def addfield(self, name: str, value: str, inline: bool = False) -> 'EmbedBuilder':
         self.fields.append(Field(name, value, inline))
         return self
@@ -65,8 +66,9 @@ class EmbedBuilder:
         return self
 
     def black(self) -> 'EmbedBuilder':
-        self.color = discord.Color.from_rgb(0,0,0)
+        self.color = discord.Color.from_rgb(0, 0, 0)
         return self
+
 
 class Field:
     def __init__(self, name: str, value: str, inline: bool = False) -> None:
@@ -74,13 +76,15 @@ class Field:
         self.value = value
         self.inline = inline
 
+
 def geterrorembedbuilder(fieldname: str, fieldvalue: str) -> discord.Embed:
-    eb  = getbaseembedbuilder()
+    eb = getbaseembedbuilder()
     return (eb
             .settitle("Unavailable")
             .setdescription("Error has occurred. Please see reason below.")
             .addfield(fieldname, fieldvalue)
             .build())
+
 
 def getnopermsembedbuilder() -> discord.Embed:
     eb = getbaseembedbuilder()

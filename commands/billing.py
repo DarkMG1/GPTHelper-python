@@ -1,11 +1,11 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+import discord
 from discord import app_commands
 from discord.ext import commands
 
-import discord
-from util.builder import geterrorembedbuilder, getbaseembedbuilder, getnopermsembedbuilder
 from storage.databasehelper import get_requests
+from util.builder import geterrorembedbuilder, getbaseembedbuilder, getnopermsembedbuilder
 
 
 class Billing(commands.Cog, name="billing"):
@@ -68,7 +68,6 @@ class Billing(commands.Cog, name="billing"):
               .build())
         await interaction.response.send_message(embed=eb, ephemeral=True)
 
+
 async def setup(bot) -> None:
     await bot.add_cog(Billing(bot))
-
-

@@ -1,41 +1,39 @@
-import openai
-import discord
-import tiktoken
-
-from discord import Message
-from openai import AsyncOpenAI
-
-from storage.classes import GPTMessage, GPTUser, GPTRequest, GPTChannel, GPTPrompt, GPTConversation, OpenAIResponse, OpenAIResult
-from util.builder import geterrorembedbuilder
-from storage.confighelper import get_config
-from storage.databasehelper import add_request
 from typing import Optional, List
 
-def discord_message_to_message(message: Message) -> Optional[GPTMessage]:
-    if (
-        message.type == discord.MessageType.thread_starter_message
-        and message.reference.cached_message
-        and len(message.reference.cached_message.embeds) > 0
-        and len(message.reference.cached_message.embeds[0].fields) > 0
-    ):
-        field = message.reference.cached_message.embeds[0].fields[0]
-        if field.value:
-            return GPTMessage(user=field.name, text=field.value)
-    else:
-        if message.content:
-            return GPTMessage(user=message.author.name, text=message.content)
+import discord
+import openai
+import tiktoken
+from discord import Message as DiscordMessage
+from openai.types.beta.thread_create_params import Message
+from openai.types.beta.threads import ThreadMessage
+
+from storage.classes import GPTMessage, GPTUser, GPTRequest, GPTChannel, GPTPrompt, GPTConversation, OpenAIResponse, \
+    OpenAIResult
+from storage.confighelper import get_config
+from storage.databasehelper import add_request
+from util.builder import geterrorembedbuilder
+from util.gptapi import get_api
+
+
+def discord_message_to_gptmessage(message: DiscordMessage) -> Optional[GPTMessage]:
+    if message.content:
+        return GPTMessage(user=message.author.name, text=message.content)
     return None
+
+
+def gpt_message_to_openai_message(gpt_messages: List[GPTMessage]) -> List[Message]:
+    messages: List[Message] = []
+    for gptmessage in gpt_messages:
+        messages.append(Message(content=gptmessage.text, role="user"))
+    return messages
+
 
 def split_into_shorter_messages(message: str) -> List[str]:
     return [
-        message[i : i + 1700]
+        message[i: i + 1700]
         for i in range(0, len(message), 1700)
     ]
 
-api = AsyncOpenAI(
-    api_key= get_config().openai_token,
-    timeout= get_config().timeout
-)
 
 async def generate_completion_response(messages: List[GPTMessage], channel_config: GPTChannel) -> OpenAIResponse:
     rendered = None
@@ -48,6 +46,7 @@ async def generate_completion_response(messages: List[GPTMessage], channel_confi
             convo=GPTConversation(messages),
         )
         rendered = prompt.full_render("GPTHelper")
+        api = await get_api()
         response = await api.chat.completions.create(
             model=channel_config.current_model.model_name(),
             messages=rendered,
@@ -59,8 +58,8 @@ async def generate_completion_response(messages: List[GPTMessage], channel_confi
         reply = response.choices[0].message.content.strip()
         return OpenAIResponse(
             status=OpenAIResult.OK,
-            prompt_tokens= response.usage.prompt_tokens,
-            completion_tokens= response.usage.completion_tokens,
+            prompt_tokens=response.usage.prompt_tokens,
+            completion_tokens=response.usage.completion_tokens,
             reply_text=reply,
             status_text=None
         )
@@ -92,6 +91,7 @@ async def generate_completion_response(messages: List[GPTMessage], channel_confi
             status_text=str(e)
         )
 
+
 async def process_response(gpt_user: GPTUser, thread: discord.Thread, response_data: OpenAIResponse):
     status = response_data.status
     reply_text = response_data.reply_text
@@ -121,15 +121,18 @@ async def process_response(gpt_user: GPTUser, thread: discord.Thread, response_d
             embed=geterrorembedbuilder("Error", f"**Error** - {status_text}")
         )
 
+
 async def close_thread(thread: discord.Thread):
     await thread.send(
-        embed =  geterrorembedbuilder("Thread Closed", "The thread has reached the model's context limit. Please restart the chat and ask the question again.")
+        embed=geterrorembedbuilder("Thread Closed",
+                                   "The thread has reached the model's context limit. Please restart the chat and ask the question again.")
     )
     await thread.edit(archived=True, locked=True)
 
+
 def num_tokens_from_messages(messages: list[dict[str, str]], model):
     try:
-        encoding = tiktoken.encoding_for_model(model.model_name)
+        encoding = tiktoken.encoding_for_model(model.model_name())
     except KeyError:
         print("Warning: model not found. Using cl100k_base encoding.")
         encoding = tiktoken.get_encoding("cl100k_base")
@@ -144,3 +147,44 @@ def num_tokens_from_messages(messages: list[dict[str, str]], model):
                 num_tokens += tokens_per_name
     num_tokens += 3
     return num_tokens
+
+
+def num_tokens_from_list(messages: list[ThreadMessage], model):
+    try:
+        encoding = tiktoken.encoding_for_model(model.model_name())
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        encoding = tiktoken.get_encoding("cl100k_base")
+    tokens_per_message = 3
+    num_tokens = 0
+    for processed in messages:
+        if processed.role == "assistant":
+            num_tokens += tokens_per_message
+            num_tokens += len(encoding.encode(text=processed.content[0].text.value))
+
+
+def num_tokens_from_bytes(file_data: bytes, model):
+    try:
+        encoding = tiktoken.encoding_for_model(model.model_name())
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        encoding = tiktoken.get_encoding("cl100k_base")
+
+    try:
+        string_data = file_data.decode('utf-8')
+    except UnicodeDecodeError:
+        try:
+            string_data = file_data.decode('ISO-8859-1')
+        except UnicodeDecodeError:
+            string_data = file_data.decode('latin1', errors='ignore')
+
+    return len(encoding.encode(text=string_data))
+
+
+def num_tokens_from_string(file_data: str, model):
+    try:
+        encoding = tiktoken.encoding_for_model(model.model_name())
+    except KeyError:
+        print("Warning: model not found. Using cl100k_base encoding.")
+        encoding = tiktoken.get_encoding("cl100k_base")
+    return len(encoding.encode(text=file_data))

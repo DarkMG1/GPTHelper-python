@@ -1,9 +1,11 @@
-import sqlite3
-import pickle
 import base64
+import pickle
+import sqlite3
+
+import discord
 
 from storage.classes import *
-import discord
+
 
 def save():
     conn = sqlite3.connect('database.db')
@@ -24,8 +26,14 @@ def save():
     conn.commit()
     conn.close()
 
+
+def test():
+    print("test")
+
+
 _gpt_users: QueueableList[GPTUser] = QueueableList(callback=save)
 _requests_map: QueueableDict[int, List[GPTRequest]] = QueueableDict(callback=save)
+
 
 def setup_database():
     conn = sqlite3.connect('database.db')
@@ -35,11 +43,13 @@ def setup_database():
     load_requests(conn)
     conn.close()
 
+
 def setup_gpt_users(conn: sqlite3.Connection):
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS gpt_users
                  (id INTEGER PRIMARY KEY,  object TEXT)''')
     conn.commit()
+
 
 def setup_requests(conn: sqlite3.Connection):
     c = conn.cursor()
@@ -47,7 +57,8 @@ def setup_requests(conn: sqlite3.Connection):
                  (id INTEGER PRIMARY KEY,  object TEXT)''')
     conn.commit()
 
-def load_gpt_users(conn: sqlite3.Connection)-> None:
+
+def load_gpt_users(conn: sqlite3.Connection) -> None:
     global _gpt_users
     c = conn.cursor()
     c.execute('SELECT * FROM gpt_users')
@@ -56,6 +67,7 @@ def load_gpt_users(conn: sqlite3.Connection)-> None:
         obj_base64 = row[1]
         obj = pickle.loads(base64.b64decode(obj_base64))
         _gpt_users.append(obj)
+
 
 def load_requests(conn: sqlite3.Connection) -> None:
     global _requests_map
@@ -67,22 +79,29 @@ def load_requests(conn: sqlite3.Connection) -> None:
         obj = pickle.loads(base64.b64decode(obj_base64))
         _requests_map[row[0]] = obj
 
+
 def add_user(user: discord.User, channel: discord.TextChannel):
     gpt_user = GPTUser(user.id, 0, False, GPTChannel(
         id=channel.id
     ))
     _gpt_users.append(gpt_user)
 
+
 def add_request(user: GPTUser, request: GPTRequest):
     if user.id in _requests_map:
         _requests_map[user.id].append(request)
+        _requests_map[user.id] = _requests_map[user.id]
     else:
         _requests_map[user.id] = [request]
 
+
 def remove_user(user: GPTUser):
     _gpt_users.remove(user)
+
+
 def get_gpt_users() -> List[GPTUser]:
     return _gpt_users
+
 
 def get_requests() -> dict[int, List[GPTRequest]]:
     return _requests_map

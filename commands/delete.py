@@ -1,6 +1,6 @@
+import discord
 from discord import app_commands
 from discord.ext import commands
-import discord
 
 from storage.databasehelper import remove_user, get_gpt_users
 from util.builder import getbaseembedbuilder, geterrorembedbuilder, getnopermsembedbuilder
@@ -45,6 +45,7 @@ class Delete(commands.Cog, name="delete"):
               .black()
               .build())
         await interaction.response.send_message(embed=eb)
+
 
 async def setup(bot) -> None:
     await bot.add_cog(Delete(bot))

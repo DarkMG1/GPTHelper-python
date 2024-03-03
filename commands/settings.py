@@ -1,10 +1,10 @@
+import discord
 from discord import app_commands
 from discord.ext import commands
 
 from storage.classes import Model
 from storage.databasehelper import get_gpt_users
 from util.builder import getbaseembedbuilder, geterrorembedbuilder
-import discord
 
 
 class Settings(commands.Cog, name="settings"):
@@ -25,7 +25,8 @@ class Settings(commands.Cog, name="settings"):
     @app_commands.describe(
         max_tokens="How many tokens the model should output at max for each message."
     )
-    async def settings(self, interaction: discord.Interaction, model: str = Model.GPT_4_TURBO.model_name(), temperature: float = 1.0, max_tokens: int = 4096) -> None:
+    async def settings(self, interaction: discord.Interaction, model: str = Model.GPT_4_TURBO.model_name(),
+                       temperature: float = 1.0, max_tokens: int = 4096) -> None:
         channel = interaction.channel
         if isinstance(channel, discord.Thread):
             channel = channel.parent
@@ -36,7 +37,8 @@ class Settings(commands.Cog, name="settings"):
                 gpt_user = user
                 break
         if gpt_user is None:
-            eb = geterrorembedbuilder("Unavailable", "You can only use this command in a chat thread or a chat channel.")
+            eb = geterrorembedbuilder("Unavailable",
+                                      "You can only use this command in a chat thread or a chat channel.")
             await interaction.response.send_message(embed=eb, ephemeral=True)
             return
         if not gpt_user.currently_chatting:
@@ -61,19 +63,21 @@ class Settings(commands.Cog, name="settings"):
         gpt_user.gpt_channel.current_max_tokens = max_tokens
         await interaction.response.send_message(
             embed=getbaseembedbuilder()
-                .settitle("Settings updated")
-                .addfield(name="Model", value=model)
-                .addfield(name="Temperature", value=str(temperature))
-                .addfield(name="Max Tokens", value=str(max_tokens))
-                .black().build(),
+            .settitle("Settings updated")
+            .addfield(name="Model", value=model)
+            .addfield(name="Temperature", value=str(temperature))
+            .addfield(name="Max Tokens", value=str(max_tokens))
+            .black().build(),
             ephemeral=True
         )
+
 
 def get_model_by_name(model_name):
     for name, model in Model.__members__.items():
         if model.model_name == model_name:
             return model
     return None
+
 
 async def setup(bot) -> None:
     await bot.add_cog(Settings(bot))

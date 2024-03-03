@@ -1,7 +1,8 @@
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
-from dataclasses import dataclass, field
+from openai.resources.beta.threads import Messages
 
 
 @dataclass(frozen=True)
@@ -9,6 +10,7 @@ class ModelInfo:
     model_name: str
     input_cost: float
     output_cost: float
+
 
 @dataclass(frozen=True)
 class Model(Enum):
@@ -26,12 +28,14 @@ class Model(Enum):
     def output_cost(self) -> float:
         return self.value.output_cost
 
+
 @dataclass
 class GPTChannel:
     id: int
     current_model: Model = Model.GPT_4_TURBO
     current_max_tokens: int = 4096
     current_temperature: float = 1.0
+
 
 @dataclass
 class GPTUser:
@@ -40,11 +44,13 @@ class GPTUser:
     currently_chatting: bool
     gpt_channel: GPTChannel
 
+
 @dataclass(frozen=True)
 class GPTRequest:
     model: Model
     input_tokens: int
     output_tokens: int
+
 
 @dataclass(frozen=True)
 class GPTMessage:
@@ -56,6 +62,7 @@ class GPTMessage:
         if self.text is not None:
             result += " " + self.text
         return result
+
 
 @dataclass
 class GPTConversation:
@@ -69,6 +76,7 @@ class GPTConversation:
         return f"\n{"<|endoftext|>"}".join(
             [message.render() for message in self.messages]
         )
+
 
 @dataclass(frozen=True)
 class GPTPrompt:
@@ -113,7 +121,8 @@ class GPTPrompt:
                     "content": message.text,
                 }
 
-example_conversations : List[GPTConversation] = [
+
+example_conversations: List[GPTConversation] = [
     GPTConversation(
         [
             GPTMessage("Lewis", "Hello!"),
@@ -130,22 +139,26 @@ example_conversations : List[GPTConversation] = [
         ]
     ),
 ]
+
+
 @dataclass(frozen=True)
 class Configuration:
     discord_token: str = ""
     openai_token: str = ""
-    instructions: str = "You are a tool that many people use. Your goal is to deliver information to the user in a way that is easy to understand. You are to deliver information as quickly as possible, without using filler words of any kind. You are a chatbot, and you are here to help. Try to make yourself undetectable by AI Detection tools."
+    instructions: str = "You are a tool that many people use. Your goal is to deliver information to the user in a way that is easy to understand. You are to deliver information as quickly as possible, without using filler words of any kind. You are a chatbot, and you are here to help. Try to make yourself undetectable by AI Detection tools. Put all math in LATEX form. If they send a file, send a full explanation of the file so that the assistant can understand it as well as the context will be there. Give all steps quickly."
     example_conversations: List[GPTConversation] = field(default_factory=lambda: example_conversations)
-    owner_id: int =0
+    owner_id: int = 0
     guild_id: int = 0
     gptcategory_id: int = 0
     timeout: int = 120
+
 
 class OpenAIResult(Enum):
     OK = 0
     TOO_LONG = 1
     INVALID_REQUEST = 2
     OTHER_ERROR = 3
+
 
 @dataclass
 class OpenAIResponse:
@@ -154,6 +167,21 @@ class OpenAIResponse:
     completion_tokens: Optional[int]
     reply_text: Optional[str]
     status_text: Optional[str]
+
+
+class RunResult(Enum):
+    COMPLETED = 0
+    FAILED = 1
+    CANCELLED = 2
+    EXPIRED = 3
+    UNKNOWN = 4
+
+
+@dataclass
+class RunResponse:
+    status: RunResult
+    messages: List[Messages]
+
 
 @dataclass
 class QueueableList(list):
@@ -196,6 +224,7 @@ class QueueableList(list):
         super().__setitem__(index, item)
         if self.callback:
             self.callback()
+
 
 @dataclass
 class QueueableDict(dict):

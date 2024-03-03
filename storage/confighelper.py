@@ -1,20 +1,23 @@
+from dataclasses import asdict
 from pathlib import Path
 
 import yaml
-from dataclasses import asdict
 
 from storage.classes import Configuration
 
 _configuration = Configuration()
 
+
 def write_config(config: Configuration):
     with open("config/config.yml", 'w') as file:
         yaml.dump(asdict(config), file)
+
 
 def read_config() -> Configuration:
     with open("config/config.yml", 'r') as file:
         data = yaml.safe_load(file)
     return Configuration(**data)
+
 
 def setup_config() -> None:
     global _configuration
@@ -29,8 +32,6 @@ def setup_config() -> None:
         config = read_config()
         _configuration = config
 
+
 def get_config() -> Configuration:
     return _configuration
-
-
-

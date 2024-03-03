@@ -24,5 +24,6 @@ class Sync(commands.Cog, name="sync"):
             eb.addfield(command.name, command.description, True)
         await ctx.send(embed=eb.build(), ephemeral=True)
 
+
 async def setup(bot) -> None:
     await bot.add_cog(Sync(bot))
